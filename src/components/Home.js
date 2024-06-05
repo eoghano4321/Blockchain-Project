@@ -14,6 +14,7 @@ function Home() {
             <div>
                 <h1>Home</h1>
                 <p>Welcome to the Advanced Ticket System</p>
+                <br/>
             </div>
         </section>
     );

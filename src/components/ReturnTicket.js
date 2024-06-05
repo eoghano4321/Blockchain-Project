@@ -1,22 +1,23 @@
 import NavBar from "./NavBar";
 import abi from "./abi.json";
 
-import React from 'react';
+import React, { useContext } from 'react';
+import AppContext from "./AppContext";
 
 import Web3 from 'web3';
 
-class ReturnTicket extends React.Component {
-    // provider = new Web3.providers.HttpProvider("https://rpc2.sepolia.org");
-    web3 = new Web3("http://localhost:3030/api");
-    contractAddress = "0x7c48675cbeACb3E6351cde0CD2eCb5DDcE4fAbec";
-    ABI = abi;
-    contract = new this.web3.eth.Contract(this.ABI, this.contractAddress);
+const ReturnTicket =()=> {
+    // Route transactions through the proxy server
+    const web3 = new Web3("http://localhost:3030/api");
+    const tokenAddress = useContext(AppContext).tokenAddress;
+    const ABI = abi;
+    const contract = new web3.eth.Contract(ABI, tokenAddress);
+    const walletAddress = useContext(AppContext).walletAddress;
+    const privateKey = useContext(AppContext).privateKey;
 
 
-    returnTicket = async () => {
-        const privateKey = document.getElementById('privateKey').value;
+    const returnTicket = async () => {
         const amountToReturn = document.getElementById('amountToReturn').value;
-        const walletAddress = document.getElementById('walletAddress').value;
 
         if (!privateKey || !amountToReturn || !walletAddress) {
             alert('Please enter wallet address, private key and amount to return');
@@ -29,7 +30,7 @@ class ReturnTicket extends React.Component {
             document.getElementById('Loading').style.display = "block";
 
             // Get the wallet from the private key
-            const wallet = this.web3.eth.accounts.privateKeyToAccount(privateKey);
+            const wallet = web3.eth.accounts.privateKeyToAccount(privateKey);
 
             // Check if the wallet address is the same as the one entered by the user to prevent errors
             if (!wallet || wallet.address !== walletAddress) {
@@ -38,35 +39,36 @@ class ReturnTicket extends React.Component {
             }
 
             // Check if the user has enough tickets to refund
-            const balance = await this.contract.methods.balanceOf(walletAddress).call();
+            const balance = await contract.methods.balanceOf(walletAddress).call();
             if (balance < amountToReturn) {
+                document.getElementById('Loading').style.display = "none";
                 alert('Not enough tickets to refund');
                 return;
             }
 
             // Use the returnTicket function in the contract ABI
-            const transaction = this.contract.methods.refundToken(amountToReturn);
+            const transaction = contract.methods.refundToken(amountToReturn);
             const encodedABI = transaction.encodeABI();
 
             // Get the current gas price
-            const gasPriceEstimate = await this.web3.eth.getGasPrice();
+            const gasPriceEstimate = await web3.eth.getGasPrice();
 
             // Create the transaction object
             const tx = {
                 from: wallet.address,
-                to: this.contractAddress,
+                to: tokenAddress,
                 // Set the gas limit to 200,000
-                gas: this.web3.utils.toHex(200000),
+                gas: web3.utils.toHex(200000),
                 // Set the gas price to 1.5 times the current gas price to speed up the transaction
-                gasPrice: this.web3.utils.toHex(gasPriceEstimate * 15n),
+                gasPrice: web3.utils.toHex(gasPriceEstimate * 12n),
                 data: encodedABI,
             };
             console.log(tx);
 
             // Sign the transaction with the private key
-            this.web3.eth.accounts.signTransaction(tx, privateKey).then((signedTransaction) => {
+            web3.eth.accounts.signTransaction(tx, privateKey).then((signedTransaction) => {
                 // Send the signed transaction
-                this.web3.eth.sendSignedTransaction(signedTransaction.rawTransaction).on("transactionHash", (hash) => {
+                web3.eth.sendSignedTransaction(signedTransaction.rawTransaction).on("transactionHash", (hash) => {
                     // Log the transaction hash and link it to etherscan
                     console.log(`Transaction hash: ${hash}`);
                     document.getElementById('transactionHash').innerHTML = `<h3>Transaction Hash: <a href="https://sepolia.etherscan.io/tx/${hash}" target="_blank">https://sepolia.etherscan.io/tx/${hash}</a></h3>`;
@@ -96,18 +98,16 @@ class ReturnTicket extends React.Component {
     }
 
 
-    render(){
-        return (
+    return (
         <section>
         <NavBar />
-        <h1>Enter wallet details to refund a ticket</h1>
-        <label for="walletAddress">Wallet Address:</label>
+        <h1>Enter wallet details on login page to refund a ticket</h1>
+        <h3>Wallet address: {walletAddress}</h3>
+
         <br/>
-        <textarea id="walletAddress" rows="5" cols="50"></textarea>
+        
         <br/>
-        <label for="privateKey">Private Key:</label>
-        <br/>
-        <textarea id="privateKey" rows="5" cols="50"></textarea>
+        <h3>Private key: {privateKey}</h3>
         <br/>
     
         <br/>
@@ -117,7 +117,7 @@ class ReturnTicket extends React.Component {
         <br/>
         <textarea id="amountToReturn" type="number" placeholder="Enter the amount to return"></textarea>
         <br/>
-        <button id="buyTokensButton" onClick={this.returnTicket}>Refund Tickets</button>
+        <button id="buyTokensButton" onClick={returnTicket}>Refund Tickets</button>
         <br/>
         
         <div id="transactionHash"><h3>Transaction Hash: </h3></div>
@@ -131,8 +131,7 @@ class ReturnTicket extends React.Component {
         </div>
 
         </section>
-        );
-    } 
+    );
 }
 
 export default ReturnTicket;

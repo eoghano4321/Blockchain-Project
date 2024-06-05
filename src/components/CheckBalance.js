@@ -1,5 +1,5 @@
 // Check Balance of Wallet using wallet address and token address
-import React from 'react';
+import React, { useContext } from 'react';
 
 import abi from './abi.json'
 
@@ -7,36 +7,43 @@ import NavBar from './NavBar';
 
 import Web3 from 'web3';
 
+import AppContext from './AppContext';
 
-class CheckBalance extends React.Component {
-    ABI = abi;
-    constructor(props) {
-        super(props);
+
+const CheckBalance = () => {
+    const ABI = abi;
         // Route transactions through the proxy server
-        this.web3 = new Web3("http://localhost:3030/api");
-        this.checkCryptoBalance = this.checkCryptoBalance.bind(this);
-        this.checkTicketBalance = this.checkTicketBalance.bind(this);
+    const web3 = new Web3("http://localhost:3030/api");
+    const tokenAddress = useContext(AppContext).tokenAddress;
+    const userType = useContext(AppContext).userType;
+    const _walletAddress = useContext(AppContext).walletAddress;
+    let walletAddress = '';
+    if(userType === 'doorman'){
+        walletAddress = document.getElementById('walletAddress').value;
+    } else if(userType === 'customer'){
+        walletAddress = _walletAddress;
+    } else {
+        walletAddress = tokenAddress;
     }
     
-    checkCryptoBalance(){
+    const checkCryptoBalance = () => {
         // Get the wallet address inputted by the user and check that it is not null and is valid
         // Alert if the wallet address is invalid to not allow them to continue
-        const walletAddress = document.getElementById('walletAddress').value;
         if (walletAddress === '') {
             console.log("Wallet Address is empty");
             alert('Please enter a wallet address');
             return;
         }
         try{
-            if (!this.web3.utils.isAddress(walletAddress)) {
+            if (!web3.utils.isAddress(walletAddress)) {
                 console.log("Invalid Wallet Address");
                 alert('Invalid Wallet Address');
                 return;
             }
             console.log(walletAddress);
             // Call the getBalance function to get the balance of the wallet address
-            this.web3.eth.getBalance(walletAddress).then((balance) => {
-                const balanceInEther = this.web3.utils.fromWei(balance, 'ether');
+            web3.eth.getBalance(walletAddress).then((balance) => {
+                const balanceInEther = web3.utils.fromWei(balance, 'ether');
                 console.log(balance);
                 document.getElementById('cryptoBalance').innerText = 'Crypto Balance: ' + balanceInEther + ' ETH';
             });
@@ -47,25 +54,26 @@ class CheckBalance extends React.Component {
     }
 
 
-    checkTicketBalance(){
+    const checkTicketBalance=()=>{
         // Get the wallet address and token address inputted by the user and check that they are not null and are valid
-        const walletAddress = document.getElementById('walletAddress').value;
-        const tokenAddress = document.getElementById('tokenAddress').value;
-        
         try{
             if (walletAddress === '' || tokenAddress === '') {
                 console.log("Wallet or Token address is empty");
                 alert('Please enter a valid wallet and token address');
                 return;
             }
-            if(this.web3.utils.isAddress(walletAddress) && this.web3.utils.isAddress(tokenAddress)) {
+            if(web3.utils.isAddress(walletAddress) && web3.utils.isAddress(tokenAddress)) {
                 // Create a new contract object with the ABI and token address
-                const contract = new this.web3.eth.Contract(this.ABI, tokenAddress);
+                const contract = new web3.eth.Contract(ABI, tokenAddress);
 
                 // Call the balanceOf function to get the balance of the wallet address
                 contract.methods.balanceOf(walletAddress).call().then(function(balance) {
-                    document.getElementById('tokenBalance').innerText = 'Token Balance: ' + balance;
-                
+                    if(userType === 'vendor'){
+                        document.getElementById('tokenBalance').innerText = 'Remaining Tickets: ' + balance;
+                    }
+                    else{
+                        document.getElementById('tokenBalance').innerText = 'Token Balance: ' + balance;
+                    }
                 });
 
                 // Call the name, symbol, decimals and totalSupply functions to get the token information from the deployed contract
@@ -97,44 +105,98 @@ class CheckBalance extends React.Component {
         
     }
 
+    // Check which type of user is logged in and display the appropriate information
+    if(userType === 'customer'){
+        return(
+            <section>
+                <NavBar />
+                <h1>Check Balance</h1>
+                <h3>Wallet address: {walletAddress}</h3>
+                <br/>
+                <br/>
 
-    render(){
-        return (
-        <section>
-            <NavBar />
-            <h1>Check Balance</h1>
-            <label for="walletAddress">Enter your wallet address:</label>
-            <input type="text" id="walletAddress" name="walletAddress"></input>
-            <br/>
-            <br/>
+                <button id="cryptoBalanceButton" onClick={checkCryptoBalance}>Check Crypto Balance</button>
+                <br/>
+                <br/>
 
-            <button id="cryptoBalanceButton" onClick={this.checkCryptoBalance}>Check Crypto Balance</button>
-            <br/>
-            <br/>
+                <label id="cryptoBalance">Crypto Balance: </label>
+                <br/>
+                <br/>
+                <br/>
+                <button id="tokenBalanceButton" onClick={checkTicketBalance}>Check Token Balance</button>
+                <br/>
+                <br/>
 
-            <label id="cryptoBalance">Crypto Balance: </label>
-            <br/>
-            <br/>
-            
-            <label for="tokenAddress">Enter the token address you are checking the token balance of:</label>
-            <input type="text" id="tokenAddress" name="tokenAddress"></input>
-            <br/>
-            <button id="tokenBalanceButton" onClick={this.checkTicketBalance}>Check Token Balance</button>
-            <br/>
-            <br/>
+                <label id="tokenBalance">Token Balance:</label>
+                <br/>
+                <label id="tokenName">Token Name:</label>
+                <br/>
+                <label id="tokenSymbol">Token Symbol:</label>
+                <br/>
+                <label id="tokenDecimals">Token Decimals:</label>
+                <br/>
+                <label id="tokenTotalSupply">Token Total Supply:</label>
+                <br/>
+            </section>
+        );
+    } else if(userType==='doorman'){
+        return(
+            <section>
+                <NavBar />
+                <h1>Check Customer Balance</h1>
+                <label for="walletAddress">Customer Wallet Address:</label>
+                <br/>
+                <textarea id="walletAddress" rows="5" cols="50"></textarea>
+                <br/>
+                <br/>
+                <button id="tokenBalanceButton" onClick={checkTicketBalance}>Check Token Balance</button>
+                <br/>
+                <br/>
 
-            <label id="tokenBalance">Token Balance:</label>
-            <br/>
-            <label id="tokenName">Token Name:</label>
-            <br/>
-            <label id="tokenSymbol">Token Symbol:</label>
-            <br/>
-            <label id="tokenDecimals">Token Decimals:</label>
-            <br/>
-            <label id="tokenTotalSupply">Token Total Supply:</label>
-            <br/>
-        </section>
-    );
+                <label id="tokenBalance">Token Balance:</label>
+                <br/>
+                <label id="tokenName">Token Name:</label>
+                <br/>
+                <label id="tokenSymbol">Token Symbol:</label>
+                <br/>
+                <label id="tokenDecimals">Token Decimals:</label>
+                <br/>
+                <label id="tokenTotalSupply">Token Total Supply:</label>
+                <br/>
+            </section>
+        );
+    } else{
+        return(
+            <section>
+                <NavBar />
+                <h1>Check Amount of Tickets Remaining</h1>
+                <br/>
+                <br/>
+
+                <button id="cryptoBalanceButton" onClick={checkCryptoBalance}>Check Crypto Balance</button>
+                <br/>
+                <br/>
+
+                <label id="cryptoBalance">Crypto Balance: </label>
+                <br/>
+                <br/>
+                <br/>
+                <button id="tokenBalanceButton" onClick={checkTicketBalance}>Check Token Balance</button>
+                <br/>
+                <br/>
+
+                <label id="tokenBalance">Remaining Tickets:</label>
+                <br/>
+                <label id="tokenName">Token Name:</label>
+                <br/>
+                <label id="tokenSymbol">Token Symbol:</label>
+                <br/>
+                <label id="tokenDecimals">Token Decimals:</label>
+                <br/>
+                <label id="tokenTotalSupply">Token Total Supply:</label>
+                <br/>
+            </section>
+        );
     }
 }
 

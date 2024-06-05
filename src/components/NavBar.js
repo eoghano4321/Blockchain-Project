@@ -2,9 +2,13 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useContext } from 'react';
+import AppContext  from './AppContext.js';
 
-function NavBar() {
-    return (
+const NavBar=() =>{
+    const {userType} = useContext(AppContext);
+    if(userType === 'customer'){
+        return (
         <div className='nav'>
             <Link to="/" style={{padding:5}}>Home</Link>
             <Link to="/login" style={{padding:5}}>Login</Link>
@@ -14,7 +18,17 @@ function NavBar() {
             <Link to="/returnticket" style={{padding:5}}>Return Ticket</Link>
             <Link to="/checkbalance" style={{padding:5}}>Check Balance</Link>
         </div>
-    );
+        );
+    } else{
+        return (
+            <div className='nav'>
+            <Link to="/" style={{padding:5}}>Home</Link>
+            <Link to="/login" style={{padding:5}}>Login</Link>
+            <Link to="/checkbalance" style={{padding:5}}>Check Balance</Link>
+            </div>
+        );
+
+    }
 }
 
 export default NavBar;

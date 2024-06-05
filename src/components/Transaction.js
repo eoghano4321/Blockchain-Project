@@ -2,21 +2,24 @@ import NavBar from "./NavBar";
 import abi from "./abi.json";
 import "./index.css";
 
-import React from 'react';
+import React, { useContext } from 'react';
 
 import Web3 from 'web3';
 
-class Transaction extends React.Component {
-    // Route transactions through the proxy server
-    web3 = new Web3("http://localhost:3030/api");
-    contractAddress = "0x7c48675cbeACb3E6351cde0CD2eCb5DDcE4fAbec";
-    ABI = abi;
-    contract = new this.web3.eth.Contract(this.ABI, this.contractAddress);
+import AppContext from "./AppContext";
 
-    buyTokens = async () => {          
-        const privateKey = document.getElementById('privateKey').value;
+const Transaction = () =>{
+    // Route transactions through the proxy server
+    const web3 = new Web3("http://localhost:3030/api");
+    const contractAddress = useContext(AppContext).tokenAddress;
+    const ABI = abi;
+    const contract = new web3.eth.Contract(ABI, contractAddress);
+    const privateKey = useContext(AppContext).privateKey;
+    const walletAddress = useContext(AppContext).walletAddress;
+
+
+    const buyTokens = async () => {          
         const amountToBuy = document.getElementById('amountToBuy').value;
-        const walletAddress = document.getElementById('walletAddress').value;
 
         if (!privateKey || !amountToBuy || !walletAddress) {
             alert('Please enter wallet address, private key and amount to buy');
@@ -29,7 +32,7 @@ class Transaction extends React.Component {
             document.getElementById('Loading').style.display = "block";
 
             // Get the wallet from the private key
-            const wallet = this.web3.eth.accounts.privateKeyToAccount(privateKey);
+            const wallet = web3.eth.accounts.privateKeyToAccount(privateKey);
 
             // Check if the wallet address is the same as the one entered by the user to prevent errors
             if (!wallet || wallet.address !== walletAddress) {
@@ -38,23 +41,23 @@ class Transaction extends React.Component {
             }
             
             // Get the token value from the contract to calculate the cost
-            const tokenValue = await this.contract.methods.tokenCost().call();
+            const tokenValue = await contract.methods.tokenCost().call();
 
             // Use the buyToken function in the contract ABI
-            const transaction = this.contract.methods.buyToken();
+            const transaction = contract.methods.buyToken();
             const encodedABI = transaction.encodeABI();
 
             // Get the current gas price
-            const gasPriceEstimate = await this.web3.eth.getGasPrice();
+            const gasPriceEstimate = await web3.eth.getGasPrice();
 
             // Create the transaction object
             const tx = {
                 from: wallet.address,
-                to: this.contractAddress,
+                to: contractAddress,
                 // Set the gas limit to 200,000
-                gas: this.web3.utils.toHex(200000),
+                gas: web3.utils.toHex(200000),
                 // Set the gas price to 1.5 times the current gas price to speed up the transaction
-                gasPrice: this.web3.utils.toHex(gasPriceEstimate * 15n),
+                gasPrice: web3.utils.toHex(gasPriceEstimate * 12n),
                 data: encodedABI,
                 // Multiply the amount of tokens wanted by the value of each token
                 value: amountToBuy * Number(tokenValue),
@@ -62,9 +65,9 @@ class Transaction extends React.Component {
             console.log(tx);
 
             // Sign the transaction with the private key
-            this.web3.eth.accounts.signTransaction(tx, privateKey).then((signedTransaction) => {
+            web3.eth.accounts.signTransaction(tx, privateKey).then((signedTransaction) => {
                 // Send the signed transaction
-                this.web3.eth.sendSignedTransaction(signedTransaction.rawTransaction).on("transactionHash", (hash) => {
+                web3.eth.sendSignedTransaction(signedTransaction.rawTransaction).on("transactionHash", (hash) => {
                     // Log the transaction hash and link it to etherscan
                     console.log(`Transaction hash: ${hash}`);
                     document.getElementById('transactionHash').innerHTML = `<h3>Transaction Hash: <a href="https://sepolia.etherscan.io/tx/${hash}" target="_blank">https://sepolia.etherscan.io/tx/${hash}</a></h3>`;
@@ -92,9 +95,9 @@ class Transaction extends React.Component {
     }
 
     // When the amount to buy changes, estimate the cost
-    estimateCost = async () => {
+    const estimateCost = async () => {
         // Get the value of each token from the contract
-        const tokenValue = await this.contract.methods.tokenCost().call();       
+        const tokenValue = await contract.methods.tokenCost().call();       
 
         const amountToBuy = document.getElementById('amountToBuy').value;
 
@@ -107,18 +110,16 @@ class Transaction extends React.Component {
     }
 
 
-    render(){
-        return (
+    return (
         <section>
         <NavBar />
-        <h1>Enter wallet details to buy a ticket</h1>
-        <label for="walletAddress">Wallet Address:</label>
+        <h1>Enter wallet details on login page to buy a ticket</h1>
+        <h3>Wallet address: {walletAddress}</h3>
+
         <br/>
-        <textarea id="walletAddress" rows="5" cols="50"></textarea>
+        
         <br/>
-        <label for="privateKey">Private Key:</label>
-        <br/>
-        <textarea id="privateKey" rows="5" cols="50"></textarea>
+        <h3>Private key: {privateKey}</h3>
         <br/>
     
         <br/>
@@ -126,10 +127,10 @@ class Transaction extends React.Component {
         <h3 for="buyTokensButton">Buy Tokens from Contract <a href="https://sepolia.etherscan.io/address/0x7c48675cbeACb3E6351cde0CD2eCb5DDcE4fAbec">0x7c48675cbeACb3E6351cde0CD2eCb5DDcE4fAbec</a></h3>
         <br/>
         <br/>
-        <textarea id="amountToBuy" type="number" placeholder="Enter the amount to buy" onChange={this.estimateCost}></textarea>
+        <textarea id="amountToBuy" type="number" placeholder="Enter the amount to buy" onChange={estimateCost}></textarea>
         <br/>
         <div id="estCost"><h3>Estimated Cost: </h3></div>
-        <button id="buyTokensButton" onClick={this.buyTokens}>Buy Tokens</button>
+        <button id="buyTokensButton" onClick={buyTokens}>Buy Tokens</button>
         <br/>
         
         <div id="transactionHash"><h3>Transaction Hash: </h3></div>
@@ -143,8 +144,7 @@ class Transaction extends React.Component {
         </div>
 
         </section>
-        );
-    } 
+    );
 }
 
 export default Transaction;

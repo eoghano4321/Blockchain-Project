@@ -3,7 +3,6 @@ import NavBar from './NavBar';
 
 import Web3 from 'web3';
 
-
 class CreateWallet extends React.Component {
     constructor(props) {
         super(props);
@@ -56,7 +55,7 @@ class CreateWallet extends React.Component {
     }
 
     saveAs(blob, filename) {
-        // Save the keystore as a file and assign it to the download button
+        // Save the keystore as a file and assign it to the download button and download it
         var url = URL.createObjectURL(blob);
         var a = document.createElement("a");
         a.href = url;
