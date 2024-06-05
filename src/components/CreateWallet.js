@@ -18,19 +18,23 @@ class CreateWallet extends React.Component {
     }
     
     async handleCreateWallet() {
+        // Check if the password is not empty
         if (this.state.password === '') {
             console.log("Password is empty");
             alert('Please enter a password for the Key Store');
             return;
         }
 
+        // Create a new wallet
         const web3 = new Web3();
         const wallet = web3.eth.accounts.create();
+        // Get the private key and the password and encrypt the private key to create the keystore
         const encryptedKeystore = await web3.eth.accounts.encrypt(wallet.privateKey, this.state.password);
 
         console.log(wallet);
         console.log(encryptedKeystore);
 
+        // Set the wallet address, private key and keystore in the state
         this.setState({
             walletAddress: wallet.address,
             privateKey: wallet.privateKey,
@@ -39,7 +43,9 @@ class CreateWallet extends React.Component {
     };
     
     
+
     downloadKeystore() {
+        // Allow the user to download the keystore once they have created a wallet
         if(this.state.keystore === ''){
             alert("Please create a wallet first");
             return;
@@ -50,6 +56,7 @@ class CreateWallet extends React.Component {
     }
 
     saveAs(blob, filename) {
+        // Save the keystore as a file and assign it to the download button
         var url = URL.createObjectURL(blob);
         var a = document.createElement("a");
         a.href = url;

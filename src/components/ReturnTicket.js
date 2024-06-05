@@ -1,29 +1,29 @@
 import NavBar from "./NavBar";
 import abi from "./abi.json";
-import "./index.css";
 
 import React from 'react';
 
 import Web3 from 'web3';
 
-class Transaction extends React.Component {
-    // Route transactions through the proxy server
+class ReturnTicket extends React.Component {
+    // provider = new Web3.providers.HttpProvider("https://rpc2.sepolia.org");
     web3 = new Web3("http://localhost:3030/api");
     contractAddress = "0x7c48675cbeACb3E6351cde0CD2eCb5DDcE4fAbec";
     ABI = abi;
     contract = new this.web3.eth.Contract(this.ABI, this.contractAddress);
 
-    buyTokens = async () => {          
+
+    returnTicket = async () => {
         const privateKey = document.getElementById('privateKey').value;
-        const amountToBuy = document.getElementById('amountToBuy').value;
+        const amountToReturn = document.getElementById('amountToReturn').value;
         const walletAddress = document.getElementById('walletAddress').value;
 
-        if (!privateKey || !amountToBuy || !walletAddress) {
-            alert('Please enter wallet address, private key and amount to buy');
+        if (!privateKey || !amountToReturn || !walletAddress) {
+            alert('Please enter wallet address, private key and amount to return');
             return;
         }
         console.log(privateKey);
-        console.log(amountToBuy);
+        console.log(amountToReturn);
         try{
             // Show the loading block to give visual feedback to the user
             document.getElementById('Loading').style.display = "block";
@@ -36,12 +36,16 @@ class Transaction extends React.Component {
                 alert('Invalid private key');
                 return;
             }
-            
-            // Get the token value from the contract to calculate the cost
-            const tokenValue = await this.contract.methods.tokenCost().call();
 
-            // Use the buyToken function in the contract ABI
-            const transaction = this.contract.methods.buyToken();
+            // Check if the user has enough tickets to refund
+            const balance = await this.contract.methods.balanceOf(walletAddress).call();
+            if (balance < amountToReturn) {
+                alert('Not enough tickets to refund');
+                return;
+            }
+
+            // Use the returnTicket function in the contract ABI
+            const transaction = this.contract.methods.refundToken(amountToReturn);
             const encodedABI = transaction.encodeABI();
 
             // Get the current gas price
@@ -56,8 +60,6 @@ class Transaction extends React.Component {
                 // Set the gas price to 1.5 times the current gas price to speed up the transaction
                 gasPrice: this.web3.utils.toHex(gasPriceEstimate * 15n),
                 data: encodedABI,
-                // Multiply the amount of tokens wanted by the value of each token
-                value: amountToBuy * Number(tokenValue),
             };
             console.log(tx);
 
@@ -83,27 +85,14 @@ class Transaction extends React.Component {
                     // Hide the loading block
                     document.getElementById('Loading').style.display = "none";
                 });
+
             });
         } catch (error) {
             console.log(error);
+
             document.getElementById('transactionResult').innerHTML = `<h3>Transaction Result: ${error.message}</h3>`;
         }
 
-    }
-
-    // When the amount to buy changes, estimate the cost
-    estimateCost = async () => {
-        // Get the value of each token from the contract
-        const tokenValue = await this.contract.methods.tokenCost().call();       
-
-        const amountToBuy = document.getElementById('amountToBuy').value;
-
-        // Calculate the estimated cost in WEI
-        const estimatedCost = amountToBuy * Number(tokenValue) + " WEI";
-
-        // Log and display the estimated cost
-        console.log(estimatedCost);
-        document.getElementById('estCost').innerHTML = `<h3>Estimated Cost: ${estimatedCost}</h3>`;
     }
 
 
@@ -111,7 +100,7 @@ class Transaction extends React.Component {
         return (
         <section>
         <NavBar />
-        <h1>Enter wallet details to buy a ticket</h1>
+        <h1>Enter wallet details to refund a ticket</h1>
         <label for="walletAddress">Wallet Address:</label>
         <br/>
         <textarea id="walletAddress" rows="5" cols="50"></textarea>
@@ -123,13 +112,12 @@ class Transaction extends React.Component {
     
         <br/>
         <br/>
-        <h3 for="buyTokensButton">Buy Tokens from Contract <a href="https://sepolia.etherscan.io/address/0x7c48675cbeACb3E6351cde0CD2eCb5DDcE4fAbec">0x7c48675cbeACb3E6351cde0CD2eCb5DDcE4fAbec</a></h3>
+        <h3 for="returnTokensButton">Return Tickets to Contract <a href="https://sepolia.etherscan.io/address/0x7c48675cbeACb3E6351cde0CD2eCb5DDcE4fAbec">0x7c48675cbeACb3E6351cde0CD2eCb5DDcE4fAbec</a></h3>
         <br/>
         <br/>
-        <textarea id="amountToBuy" type="number" placeholder="Enter the amount to buy" onChange={this.estimateCost}></textarea>
+        <textarea id="amountToReturn" type="number" placeholder="Enter the amount to return"></textarea>
         <br/>
-        <div id="estCost"><h3>Estimated Cost: </h3></div>
-        <button id="buyTokensButton" onClick={this.buyTokens}>Buy Tokens</button>
+        <button id="buyTokensButton" onClick={this.returnTicket}>Refund Tickets</button>
         <br/>
         
         <div id="transactionHash"><h3>Transaction Hash: </h3></div>
@@ -138,7 +126,7 @@ class Transaction extends React.Component {
         <div id="transactionResult"><h3>Transaction Result: </h3></div>
         <br/>
         <div id="Loading" style={{display: "none"}}>
-            <h3>Transaction Pending... </h3>
+            <h3>Refund Pending... </h3>
             <h5>This could take a while depending on network traffic</h5>
         </div>
 
@@ -147,4 +135,4 @@ class Transaction extends React.Component {
     } 
 }
 
-export default Transaction;
+export default ReturnTicket;

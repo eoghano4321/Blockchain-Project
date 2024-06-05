@@ -9,12 +9,13 @@ import NavBar from './NavBar';
 
 function Home() {
     return (
-        <>
+        <section>
             <NavBar />
             <div>
                 <h1>Home</h1>
+                <p>Welcome to the Advanced Ticket System</p>
             </div>
-        </>
+        </section>
     );
 }
 

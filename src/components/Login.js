@@ -13,7 +13,7 @@ class Login extends Component{
 
     render(){
         return (
-            <>
+            <section>
             <NavBar />
             <div>
                 <h1>Select User</h1>
@@ -22,7 +22,7 @@ class Login extends Component{
                 <button onClick={() => this.props.dispatch({ type: 'DOORMANLOGIN' })}>Doorman</button>
                 <button onClick={() => this.props.dispatch({ type: 'VENDORLOGIN' })}>Vendor</button>
             </div>
-            </>
+            </section>
         );
     }
 

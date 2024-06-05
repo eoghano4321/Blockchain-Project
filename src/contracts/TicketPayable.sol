@@ -17,6 +17,7 @@ contract TicketPayable is IERC20 {
     string public name;
     string public symbol;
     uint8 public decimals;
+    uint256 public tokenCost = 0.00001 ether;
     uint256 private _totalSupply;
     mapping(address => uint256) private _balances;
     mapping(address => mapping(address => uint256)) private _allowances;
@@ -26,8 +27,7 @@ contract TicketPayable is IERC20 {
         symbol = _symbol;
         decimals = _decimals;
         _totalSupply = initialSupply * 10**uint256(decimals);
-        _balances[msg.sender] = _totalSupply;
-        emit Transfer(address(0), msg.sender, _totalSupply);
+        _balances[address(this)] = _totalSupply;
     }
 
     function totalSupply() external view override returns (uint256) {
@@ -77,15 +77,37 @@ contract TicketPayable is IERC20 {
     }
 
     function buyToken() external payable {
-        require(msg.value >= 0.00001 ether, "Not enough ETH sent; check price!");
-
+        require(msg.value >= tokenCost, "Not enough ETH sent; check price!");
         // Calculate the token amount. Here we're assuming 1 token for 0.00001 ETH.
         // Adjust this if you want a different ratio.
-        uint256 tokenAmount = msg.value / 0.00001 ether;
+        uint256 tokenAmount = msg.value / tokenCost;
         // convert tokenAmount to wei
         tokenAmount = tokenAmount * 10**uint256(decimals);
         // Transfer the tokens to the sender
         _transfer(address(this), msg.sender, tokenAmount);
+    }
+
+    function refundToken(uint256 amountOfTokens) external {
+        uint256 cost = amountOfTokens * tokenCost;
+
+        // Ensure the contract has enough ETH to refund
+        require(
+            address(this).balance >= cost,
+            "Contract has insufficient balance"
+        );
+
+        // Ensure the user has enough tokens to return
+        require(
+            _balances[msg.sender] >= amountOfTokens,
+            "Insufficient token balance"
+        );
+
+        // Transfer tokens from user to contract
+        _transfer(msg.sender, address(this), amountOfTokens);
+
+        // Refund ETH to the user
+        (bool success, ) = msg.sender.call{value: cost}("");
+        require(success, "ETH transfer failed");
     }
 }
 

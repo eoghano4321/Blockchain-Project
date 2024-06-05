@@ -17,6 +17,7 @@ class DecryptWallet extends React.Component {
     }
     
     async decryptWallet() {
+        // Check if the password is not empty
         const password = this.state.password;
         
         console.log(password);
@@ -26,6 +27,7 @@ class DecryptWallet extends React.Component {
             return;
         }
 
+        // Get the keystore file from the file input
         const file = document.getElementById('keystoreFile').files[0];
         if (!file) {
             console.log("No file selected");
@@ -34,15 +36,19 @@ class DecryptWallet extends React.Component {
         }
 
         console.log(file);
+        // Load the file
         const reader = new FileReader();
         reader.onload = async (event) =>{
             const encryptedKeystore = event.target.result;
             console.log(encryptedKeystore);
             try {
+                // Create a new web3 instance
                 const web3 = new Web3();
+                // Try decrypting the keystore with the password
                 const wallet = await web3.eth.accounts.decrypt(encryptedKeystore, password);
 
 
+                // If successful, set the wallet address, private key and keystore in the state
                 this.setState({
                     walletAddress: wallet.address,
                     privateKey: wallet.privateKey,
@@ -56,11 +62,13 @@ class DecryptWallet extends React.Component {
                 alert('Failed to decrypt wallet');
             }
         }
+        // Read the file as text
         reader.readAsText(file);
     };
     
 
     handlePasswordChange = (event) => {
+        // Set the password in state when it is changed in the form
         this.setState({password: event.target.value});
     }
 
